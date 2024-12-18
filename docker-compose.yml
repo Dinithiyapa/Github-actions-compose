@@ -10,7 +10,7 @@ services:
     volumes:
       - ./api:/app
     working_dir: /app
-    command: bash -c "npm install && npm start"
+    command: bash -c "./wait-for-db.sh"
     environment:
       - PORT=4000
       - DB=${API_DB}
