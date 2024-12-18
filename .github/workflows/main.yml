@@ -1,4 +1,4 @@
-name: Build, Push Docker Compose Services, and Update Linode Server
+name: Build, Push Docker Images, and Update Linode Server
 
 on:
   push:
@@ -9,36 +9,54 @@ jobs:
   build-web:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Check out the repository
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Step 2: Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # Step 3: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Step 4: Build and Push the Web Image
       - name: Build and push web image
-        run: |
-          docker compose build web
-          docker compose push web
+        uses: docker/build-push-action@v4
+        with:
+          context: ./web  # Path to the web app's Dockerfile
+          push: true
+          tags: yapadinithi/buzbud-web-action:${{ github.run_number }}-${{ github.run_attempt }}  # Use run number and attempt number for tagging
 
   build-api:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Check out the repository
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Step 2: Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # Step 3: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Step 4: Build and Push the API Image
       - name: Build and push API image
-        run: |
-          docker compose build api
-          docker compose push api
+        uses: docker/build-push-action@v4
+        with:
+          context: ./api  # Path to the API's Dockerfile
+          push: true
+          tags: yapadinithi/buzbud-api-action:${{ github.run_number }}-${{ github.run_attempt }}  # Use run number and attempt number for tagging
 
   update-linode:
     name: Update Linode Server
@@ -47,6 +65,7 @@ jobs:
       - build-api
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Execute remote SSH commands using password
       - name: Execute remote SSH commands
         uses: appleboy/ssh-action@master
         with:
@@ -55,52 +74,6 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           port: ${{ secrets.PORT }}
           script: |
-            # Check if Docker is installed, and install if missing
-            if ! command -v docker > /dev/null 2>&1; then
-              echo "Docker not found. Installing..."
-              sudo apt-get update
-              sudo apt-get install -y ca-certificates curl gnupg
-              sudo install -m 0755 -d /etc/apt/keyrings
-              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-              sudo chmod a+r /etc/apt/keyrings/docker.gpg
-              echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-              sudo apt-get update
-              sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-            else
-              echo "Docker is already installed."
-            fi
-
-            # Check if Docker Compose is installed, and install if missing
-            if ! docker compose version > /dev/null 2>&1; then
-              echo "Docker Compose not found. Installing..."
-              mkdir -p ~/.docker/cli-plugins/
-              curl -SL https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
-              chmod +x ~/.docker/cli-plugins/docker-compose
-              docker compose version
-            else
-              echo "Docker Compose is already installed."
-            fi
-
-            # Step 2: Ensure the repository is cloned on the remote server
-            REPO_DIR="/home/${{ secrets.USERNAME }}/your-repo-name"  # Update this to your actual repo path
-            if [ ! -d "$REPO_DIR" ]; then
-              echo "Cloning repository into $REPO_DIR..."
-              git clone https://github.com/your-username/your-repo-name.git $REPO_DIR
-            else
-              echo "Repository already exists. Pulling latest changes..."
-              cd $REPO_DIR
-              git pull origin main  # or the branch you need
-            fi
-
-            # Step 3: Navigate to the repository folder
-            cd $REPO_DIR
-
-            # Step 4: Pull the latest images and restart containers using Docker Compose
-            if [ -f "$REPO_DIR/docker-compose.yml" ]; then
-              echo "docker-compose.yml found at: $REPO_DIR"
-              docker compose pull
-              docker compose up -d --remove-orphans
-            else
-              echo "docker-compose.yml not found. Exiting."
-              exit 1
-            fi
+            # Navigate to the deployment directory and run update commands
+            cd /path/to/your/deployment
+            bash update.sh
