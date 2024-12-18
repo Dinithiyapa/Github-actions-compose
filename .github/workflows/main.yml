@@ -6,7 +6,7 @@ on:
       - '**'  # Trigger the workflow on pushes to any branch
 
 jobs:
-  build-web:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
       # Step 1: Check out the repository
@@ -20,53 +20,23 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Step 3: Set up Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      # Step 4: Build and Push the Web Image
-      - name: Build and push web image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./web  # Path to the web app's Dockerfile
-          push: true
-          tags: yapadinithi/buzbud-web-action:${{ github.run_number }}-${{ github.run_attempt }}  # Use run number and attempt number for tagging
-
-  build-api:
-    runs-on: ubuntu-latest
-    steps:
-      # Step 1: Check out the repository
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Step 2: Log in to Docker Hub
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      # Step 3: Set up Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      # Step 4: Build and Push the API Image
-      - name: Build and push API image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./api  # Path to the API's Dockerfile
-          push: true
-          tags: yapadinithi/buzbud-api-action:${{ github.run_number }}-${{ github.run_attempt }}  # Use run number and attempt number for tagging
+      # Step 3: Build and Push All Services Using Docker Compose
+      - name: Build and push images with Docker Compose
+        run: |
+          docker-compose -f docker-compose.yml build
+          docker-compose -f docker-compose.yml push
 
   update-linode:
     name: Update Linode Server
-    needs:
-      - build-web
-      - build-api
+    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Execute remote SSH commands using password
-      - name: Execute remote SSH commands
+      # Step 1: Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Execute remote SSH commands to deploy with Docker Compose
+      - name: Deploy using Docker Compose
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
@@ -74,6 +44,6 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           port: ${{ secrets.PORT }}
           script: |
-            # Navigate to the deployment directory and run update commands
             cd /path/to/your/deployment
-            bash update.sh
+            docker-compose pull
+            docker-compose up -d --remove-orphans
