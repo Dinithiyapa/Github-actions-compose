@@ -53,7 +53,7 @@ jobs:
       - build-api
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Execute remote SSH commands to update the server
+      # Step 1: Install Docker and Docker Compose if not already installed
       - name: Execute remote SSH commands
         uses: appleboy/ssh-action@master
         with:
@@ -62,7 +62,33 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           port: ${{ secrets.PORT }}
           script: |
-            # Navigate to the deployment directory and restart services
+            # Check if Docker is installed, and install if missing
+            if ! command -v docker > /dev/null 2>&1; then
+              echo "Docker not found. Installing..."
+              sudo apt-get update
+              sudo apt-get install -y ca-certificates curl gnupg
+              sudo install -m 0755 -d /etc/apt/keyrings
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+              sudo chmod a+r /etc/apt/keyrings/docker.gpg
+              echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+              sudo apt-get update
+              sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+            else
+              echo "Docker is already installed."
+            fi
+
+            # Check if Docker Compose is installed, and install if missing
+            if ! docker compose version > /dev/null 2>&1; then
+              echo "Docker Compose not found. Installing..."
+              mkdir -p ~/.docker/cli-plugins/
+              curl -SL https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+              chmod +x ~/.docker/cli-plugins/docker-compose
+              docker compose version
+            else
+              echo "Docker Compose is already installed."
+            fi
+
+            # Step 2: Navigate to the deployment directory and restart services
             cd /path/to/your/deployment
             docker compose pull
             docker compose up -d --remove-orphans
