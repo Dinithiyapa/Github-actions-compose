@@ -82,10 +82,10 @@ jobs:
             fi
 
             # Step 2: Verify the deployment directory exists
-            DEPLOYMENT_DIR="/docker-compose.yml"  # Update to correct path
+            DEPLOYMENT_DIR="./docker-compose.yml"  # Update to correct path
             if [ -f "$DEPLOYMENT_DIR" ]; then
               echo "docker-compose.yml found at: $DEPLOYMENT_DIR"
-              cd /  # Root directory since the docker-compose.yml is at root
+              cd  $GITHUB_WORKSPACE #Root directory since the docker-compose.yml is at root
               docker compose pull
               docker compose up -d --remove-orphans
             else
