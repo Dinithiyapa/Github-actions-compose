@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Stop and remove the currently running containers
-docker-compose down
+docker stop buzbud-web-action buzbud-api-action buzbud-db-action 2>/dev/null
+docker rm buzbud-web-action buzbud-api-action buzbud-db-action 2>/dev/null
 
 # Pull the latest Docker images
 echo "Pulling the latest images..."
@@ -9,10 +10,15 @@ docker pull yapadinithi/buzbud-web-action:v1.0.0
 docker pull yapadinithi/buzbud-api-action:v1.0.0
 docker pull postgres:latest
 
-# Start the services with Docker Compose (this automatically starts containers in detached mode)
-echo "Starting the services with Docker Compose..."
-docker-compose up -d
+# Navigate to the directory containing docker-compose.yml
+cd /home/username/github-actions-compose
 
-# Display the status of the running containers
+# Run the database container using docker-compose
+echo "Starting the database container..."
+docker-compose down
+docker-compose pull
+docker-compose up -d --build
+
+# Display running containers
 echo "The following containers are running:"
 docker ps
