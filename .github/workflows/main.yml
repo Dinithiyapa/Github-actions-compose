@@ -30,7 +30,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Step 1: Check out the repository
-      - name: Checkout code
         uses: actions/checkout@v3
 
       # Step 2: Log in to Docker Hub
@@ -53,7 +52,27 @@ jobs:
       - build-api
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Install Docker and Docker Compose if not already installed
+      # Step 1: Install Docker Compose on the Linode server
+      - name: Install Docker Compose on Linode server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ secrets.PORT }}
+          script: |
+            # Install Docker Compose if not installed
+            if ! command -v docker-compose &> /dev/null
+            then
+              echo "Docker Compose not found. Installing..."
+              curl -L https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+              chmod +x /usr/local/bin/docker-compose
+              docker-compose --version
+            else
+              echo "Docker Compose is already installed."
+            fi
+
+      # Step 2: Execute remote SSH commands to update the server
       - name: Execute remote SSH commands
         uses: appleboy/ssh-action@master
         with:
@@ -62,33 +81,14 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           port: ${{ secrets.PORT }}
           script: |
-            # Check if Docker is installed, and install if missing
-            if ! command -v docker > /dev/null 2>&1; then
-              echo "Docker not found. Installing..."
-              sudo apt-get update
-              sudo apt-get install -y ca-certificates curl gnupg
-              sudo install -m 0755 -d /etc/apt/keyrings
-              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-              sudo chmod a+r /etc/apt/keyrings/docker.gpg
-              echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-              sudo apt-get update
-              sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+            # Verify the correct path to your deployment directory
+            if [ -d "/path/to/your/deployment" ]; then
+              cd /path/to/your/deployment
+              # Pull the latest Docker images
+              docker compose pull
+              # Restart services with the updated configuration
+              docker compose up -d --remove-orphans
             else
-              echo "Docker is already installed."
+              echo "Deployment directory not found. Exiting."
+              exit 1
             fi
-
-            # Check if Docker Compose is installed, and install if missing
-            if ! docker compose version > /dev/null 2>&1; then
-              echo "Docker Compose not found. Installing..."
-              mkdir -p ~/.docker/cli-plugins/
-              curl -SL https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
-              chmod +x ~/.docker/cli-plugins/docker-compose
-              docker compose version
-            else
-              echo "Docker Compose is already installed."
-            fi
-
-            # Step 2: Navigate to the deployment directory and restart services
-            cd /path/to/your/deployment
-            docker compose pull
-            docker compose up -d --remove-orphans
