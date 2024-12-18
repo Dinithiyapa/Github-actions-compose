@@ -81,11 +81,11 @@ jobs:
               echo "Docker Compose is already installed."
             fi
 
-            # Step 2: Verify the deployment directory exists
-            DEPLOYMENT_DIR="./docker-compose.yml"  # Update to correct path
+            # Step 2: Verify the deployment directory exists and is correct
+            DEPLOYMENT_DIR="$GITHUB_WORKSPACE/docker-compose.yml"  # Using GITHUB_WORKSPACE for correct path reference
             if [ -f "$DEPLOYMENT_DIR" ]; then
               echo "docker-compose.yml found at: $DEPLOYMENT_DIR"
-              cd  $GITHUB_WORKSPACE #Root directory since the docker-compose.yml is at root
+              cd $GITHUB_WORKSPACE  # Ensure we're in the root directory where docker-compose.yml is located
               docker compose pull
               docker compose up -d --remove-orphans
             else
