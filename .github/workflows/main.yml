@@ -53,7 +53,7 @@ jobs:
           port: ${{ secrets.PORT }}
           script: |
             # Navigate to your project directory on the Linode server
-            cd /path/to/your/project
+            cd /home/username/github-actions-compose || git clone https://github.com/Dinithiyapa/Github-actions-compose.git /home/username/github-actions-compose
 
             # Pull the latest images from Docker Hub
             docker-compose pull
