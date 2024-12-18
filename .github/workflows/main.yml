@@ -1,81 +1,76 @@
-name: Build, Push Docker Images, and Update Linode Server
+version: '3.8'
 
-on:
-  push:
-    branches:
-      - '**'  # Trigger the workflow on pushes to any branch
+services:
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    ports:
+      - "${PORT}:${PORT}"  # Exposes Nginx on the specified port
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro  # Mount custom Nginx configuration
+    networks:
+      - frontend
+      - backend  # Connects to both networks for routing traffic
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
 
-jobs:
-  build-web:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+  web:
+    image: yapadinithi/buzbud-web-action
+    deploy:
+      replicas: 2  # Scale the web service with 2 replicas
+    ports:
+      - "3000-3001:3000"  # Map web ports to host ports
+    command: npm start
+    environment:
+      - PORT=3000-3001
+      - API_HOST=${API_HOST}
+    networks:
+      - backend
+    depends_on:
+      - api
+    restart: unless-stopped
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+  api:
+    image: yapadinithi/buzbud-api-action
+    deploy:
+      replicas: 2  # Scale the API service with 2 replicas
+    ports:
+      - "4000-4002:4000"  # Map API ports to host ports
+    command: npm start
+    environment:
+      - PORT=4000-4002
+      - DB=${API_DB}
+    networks:
+      - backend
+    depends_on:
+      - db
+    restart: unless-stopped
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+  db:
+    image: postgres:9.6  # Use PostgreSQL 9.6
+    volumes:
+      - /data/mount:/var/lib/postgresql/data  # Persist PostgreSQL data
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+    env_file:
+      - .env  # Load environment variables from .env file
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
-      - name: Build and push web image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./web
-          push: true
-          tags: yapadinithi/buzbud-web-action:${{ github.run_number }}-${{ github.run_attempt }}
-
-  build-api:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Build and push API image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./api
-          push: true
-          tags: yapadinithi/buzbud-api-action:${{ github.run_number }}-${{ github.run_attempt }}
-
-  update-linode:
-    name: Update Linode Server
-    needs:
-      - build-web
-      - build-api
-    runs-on: ubuntu-latest
-    steps:
-      - name: Execute remote SSH commands to clone repo and run docker-compose
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-          port: ${{ secrets.PORT }}
-          script: |
-            # Clone the repository if it doesn't exist
-            if [ ! -d "/home/username/github-actions-compose" ]; then
-              git clone https://github.com/Dinithiyapa/Github-actions-compose.git /home/username/github-actions-compose
-            fi
-
-            # Change directory to the cloned repository
-            cd /home/username/github-actions-compose
-
-            # List the files to confirm docker-compose.yml exists
-            ls -la
-
-            # Pull the latest images and restart services
-            docker-compose pull
-            docker-compose up -d --remove-orphans
+networks:
+  frontend:
+    driver: bridge  # Frontend network
+  backend:
+    driver: bridge  # Backend network
