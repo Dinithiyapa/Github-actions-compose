@@ -36,9 +36,9 @@ jobs:
     - name: Deploy via SSH
       uses: appleboy/ssh-action@v0.1.0
       with:
-        host: ${{ secrets.LINODE_SERVER_IP }}
-        username: ${{ secrets.LINODE_USER }}
-        key: ${{ secrets.LINODE_SSH_KEY }}
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.PASSWORD }}
         script: |
           cd /path/to/your/project
           docker-compose pull
