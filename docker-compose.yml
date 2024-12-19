@@ -3,9 +3,8 @@ version: '3.8'
 services:
   api:
     build:
-      context: ./api  
-      dockerfile: Dockerfile  
-    image: yourusername/api:latest  # Tag for DockerHub
+      context: ./api
+      dockerfile: Dockerfile
     ports:
       - "4000-4002:4000"
     volumes:
@@ -22,9 +21,8 @@ services:
 
   web:
     build:
-      context: ./web  
-      dockerfile: Dockerfile   
-    image: yourusername/web:latest  # Tag for DockerHub
+      context: ./web
+      dockerfile: Dockerfile
     ports:
       - "3000-3001:3000"
     volumes:
