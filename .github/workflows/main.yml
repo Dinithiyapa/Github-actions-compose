@@ -41,6 +41,6 @@ jobs:
         password: ${{ secrets.PASSWORD }}
         port: ${{ secrets.PORT }}
         script: |
-          cd /path/to/your/project
+          cd /home/username/github-actions-compose
           docker-compose pull
           docker-compose up -d --scale web=2 --scale api=3
