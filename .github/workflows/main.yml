@@ -31,7 +31,7 @@ jobs:
         docker-compose -f docker-compose.yml build
         docker-compose -f docker-compose.yml push
 
-    # SSH into Linode server and pull the latest images
+    # SSH into Linode server and pull the latest images, stop old containers, and restart with the latest images
     - name: Deploy to Linode
       uses: appleboy/ssh-action@v0.1.0
       with:
@@ -40,12 +40,12 @@ jobs:
         key: ${{ secrets.LINODE_SSH_KEY }}
         script: |
           # Navigate to the directory containing docker-compose.yml on the server
-          cd /path/to/your/docker-compose/directory
+          cd /path/to/your/docker-compose/directory  # Replace with the actual directory
 
-          # Pull the latest images
+          # Pull the latest images from DockerHub
           docker-compose -f docker-compose.yml pull
 
-          # Stop and remove existing containers
+          # Stop and remove existing containers (if any)
           docker-compose -f docker-compose.yml down || true
 
           # Restart the containers with the latest images
