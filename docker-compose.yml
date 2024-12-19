@@ -2,15 +2,9 @@ version: '3.8'
 
 services:
   api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
+    image: your-dockerhub-username/api:latest
     ports:
       - "4000-4002:4000"
-    volumes:
-      - ./api:/app
-    working_dir: /app
-    command: bash -c "npm install && npm start"
     environment:
       - PORT=4000
       - DB=${API_DB}
@@ -20,15 +14,9 @@ services:
       - backend
 
   web:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
+    image: your-dockerhub-username/web:latest
     ports:
       - "3000-3001:3000"
-    volumes:
-      - ./web:/app
-    working_dir: /app
-    command: bash -c "npm install && npm start"
     environment:
       - PORT=3000
       - API_HOST=${API_HOST}
