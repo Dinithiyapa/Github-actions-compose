@@ -5,12 +5,13 @@ services:
     build:
       context: ./api  
       dockerfile: Dockerfile  
+    image: yourusername/api:latest  # Tag for DockerHub
     ports:
       - "4000-4002:4000"
     volumes:
       - ./api:/app
     working_dir: /app
-    command: bash -c "./wait-for-db.sh"
+    command: bash -c "npm install && npm start"
     environment:
       - PORT=4000
       - DB=${API_DB}
@@ -23,6 +24,7 @@ services:
     build:
       context: ./web  
       dockerfile: Dockerfile   
+    image: yourusername/web:latest  # Tag for DockerHub
     ports:
       - "3000-3001:3000"
     volumes:
