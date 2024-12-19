@@ -52,7 +52,7 @@ jobs:
           port: ${{ secrets.PORT }}
           script: |
             # Navigate to the deployment directory
-            cd /path/to/your/deployment
+            cd /home/username/github-actions-compose
 
             # Pull the latest images
             docker-compose pull
